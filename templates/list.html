@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Missing Persons List</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; }
+
+        .navbar {
+            background-color: #1a237e;
+            padding: 15px 30px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 { font-size: 20px; }
+        .navbar a { color: white; text-decoration: none; margin-left: 20px; }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            color: #1a237e;
+            margin-bottom: 25px;
+        }
+
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .person-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            width: 220px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .person-card img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 12px;
+            border: 3px solid #1a237e;
+        }
+
+        .person-card h3 {
+            font-size: 16px;
+            color: #1a237e;
+            margin-bottom: 6px;
+        }
+
+        .person-card p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .status-missing {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .empty {
+            text-align: center;
+            color: #999;
+            padding: 60px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>Missing Person Identification System</h1>
+        <div>
+            <a href="/">Home</a>
+            <a href="/register">Register</a>
+            <a href="/list">View Missing</a>
+            <a href="/alerts">Alerts</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Currently Missing Persons</h2>
+
+        {% if persons %}
+            <div class="cards">
+                {% for person in persons %}
+                    <div class="person-card">
+                        <img src="/{{ person.photo_path }}" alt="{{ person.full_name }}">
+                        <h3>{{ person.full_name }}</h3>
+                        <p>Age: {{ person.age }}</p>
+                        <p>Gender: {{ person.gender }}</p>
+                        <p>Last seen: {{ person.last_seen_location }}</p>
+                        <p>Contact: {{ person.contact_number }}</p>
+                        <span class="status-missing">Missing</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty">No missing persons registered yet.</div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

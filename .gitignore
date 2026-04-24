@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+alerts/
+uploads/
+*.jpg
+.env
+temp_face*.jpg
+stored_faces/

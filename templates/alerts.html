@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Alerts</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; }
+
+        .navbar {
+            background-color: #1a237e;
+            padding: 15px 30px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 { font-size: 20px; }
+        .navbar a { color: white; text-decoration: none; margin-left: 20px; }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h2 { color: #1a237e; margin-bottom: 25px; }
+
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            border-collapse: collapse;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #1a237e;
+            color: white;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #333;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f9f9f9; }
+
+        .confidence-high { color: #155724; font-weight: bold; }
+        .confidence-low { color: #856404; }
+
+        .empty {
+            text-align: center;
+            color: #999;
+            padding: 60px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>Missing Person Identification System</h1>
+        <div>
+            <a href="/">Home</a>
+            <a href="/register">Register</a>
+            <a href="/list">View Missing</a>
+            <a href="/alerts">Alerts</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Detection Alerts</h2>
+
+        {% if alerts %}
+            <table>
+                <tr>
+                    <th>Person Name</th>
+                    <th>Camera Location</th>
+                    <th>Detected Time</th>
+                    <th>Confidence</th>
+                </tr>
+                {% for alert in alerts %}
+                    <tr>
+                        <td>{{ alert.full_name }}</td>
+                        <td>{{ alert.camera_location }}</td>
+                        <td>{{ alert.detected_time }}</td>
+                        <td class="{% if alert.confidence_score > 80 %}confidence-high{% else %}confidence-low{% endif %}">
+                            {{ "%.1f"|format(alert.confidence_score) }}%
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div class="empty">No alerts yet. System is monitoring.</div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>
+
+

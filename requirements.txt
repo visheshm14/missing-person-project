@@ -1,0 +1,8 @@
+flask
+mysql-connector-python
+opencv-python-headless
+deepface
+numpy
+Pillow
+gunicorn
+tf-keras

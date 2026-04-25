@@ -1,8 +1,11 @@
 from flask import Flask, render_template, request, redirect, flash, jsonify
 import mysql.connector
 import os
-from face_processor import FaceProcessor
 import pickle
+
+UPLOAD_FOLDER = '/tmp/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 def get_db_connection():
@@ -17,7 +20,6 @@ def get_db_connection():
 app = Flask(__name__)
 app.secret_key = 'mysecretkey123'
 
-face_processor = FaceProcessor()
 
 
 

@@ -1,8 +1,10 @@
 flask
 mysql-connector-python
 opencv-python-headless
-deepface
 numpy
 Pillow
 gunicorn
+python-dotenv
+tensorflow-cpu==2.13.0
+deepface==0.0.79
 tf-keras

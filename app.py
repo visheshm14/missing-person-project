@@ -3,6 +3,10 @@ import mysql.connector
 import os
 import pickle
 
+app = Flask(__name__)
+app.secret_key = 'mysecretkey123'
+
+# Use /tmp for uploads on cloud (Render), fallback to local
 UPLOAD_FOLDER = '/tmp/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -17,20 +21,15 @@ def get_db_connection():
         database=os.environ.get("MYSQL_DATABASE", "railway")
     )
 
-app = Flask(__name__)
-app.secret_key = 'mysecretkey123'
-
-
-
 
 @app.route('/')
 def home():
     return render_template('home.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_missing_person():
     if request.method == 'POST':
-
         name = request.form['name']
         age = request.form['age']
         gender = request.form['gender']
@@ -40,66 +39,37 @@ def register_missing_person():
         photo = request.files['photo']
 
         if photo:
-            # Save original photo
+            # Save photo to /tmp/uploads
             photo_filename = f"{name}_{os.urandom(4).hex()}.jpg"
-            photo_path = os.path.join('uploads', photo_filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
             photo.save(photo_path)
-
             print(f"Photo saved at: {photo_path}")
 
-            # Step 1: Detect and crop face
-            cropped_face, message = face_processor.detect_and_crop_face(photo_path)
+            # NOTE: Face encoding is extracted by camera_recognition.py running locally.
+            # Web app stores the photo path; encoding will be added by local script.
+            # For now, store NULL encoding — camera script will update it.
+            encoding_bytes = None
 
-            if cropped_face is None:
-                flash(f'Face detection failed: {message}. Please use a clear front-facing photo.', 'error')
-                return redirect('/register')
-
-            # Save cropped face
-            cropped_path = os.path.join('stored_faces', photo_filename)
-            cropped_face.save(cropped_path)
-            print(f"Cropped face saved at: {cropped_path}")
-
-            # Step 2: Extract face encoding from original photo
-            face_encoding = face_processor.extract_face_encoding(photo_path)
-
-            # If failed, try with cropped face
-            if face_encoding is None:
-                print("Trying cropped face for encoding...")
-                face_encoding = face_processor.extract_face_encoding(cropped_path)
-
-            if face_encoding is None:
-                flash('Could not extract face features. Please use a clearer front-facing photo with good lighting.', 'error')
-                return redirect('/register')
-
-            print(f"Face encoding extracted successfully, length: {len(face_encoding)}")
-
-            # Step 3: Convert encoding to bytes for database storage
-            encoding_bytes = pickle.dumps(face_encoding)
-
-            # Step 4: Save everything to database
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
-
                 cursor.execute("""
                     INSERT INTO missing_persons 
                     (full_name, age, gender, last_seen_location, contact_number, reporter_name, photo_path, face_encoding)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (name, age, gender, last_seen, contact, reporter, photo_path, encoding_bytes))
-
                 conn.commit()
                 cursor.close()
                 conn.close()
 
                 print(f"Successfully registered: {name}")
-                flash(f'{name} has been registered successfully!', 'success')
+                flash(f'{name} has been registered successfully! Please run the encoding script locally to enable recognition.', 'success')
                 return redirect('/')
 
             except Exception as e:
                 print(f"Database error: {e}")
                 flash(f'Database error: {str(e)}', 'error')
                 return redirect('/register')
-
         else:
             flash('Please upload a photo.', 'error')
             return redirect('/register')

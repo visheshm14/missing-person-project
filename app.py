@@ -14,11 +14,13 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.environ.get("MYSQL_HOST", "tramway.proxy.rlwy.net"),
-        port=int(os.environ.get("MYSQL_PORT", 35641)),
-        user=os.environ.get("MYSQL_USER", "root"),
-        password=os.environ.get("MYSQL_PASSWORD", "aLgTKfCvYPjSjvsQZHAzQCvKRqikTVCL"),
-        database=os.environ.get("MYSQL_DATABASE", "railway")
+        host=os.environ.get("MYSQL_HOST"),
+        port=int(os.environ.get("MYSQL_PORT", 10261)),
+        user=os.environ.get("MYSQL_USER", "avnadmin"),
+        password=os.environ.get("MYSQL_PASSWORD"),
+        database=os.environ.get("MYSQL_DATABASE", "missing_persons_db"),
+        ssl_disabled=False,
+        connection_timeout=30
     )
 
 

@@ -13,13 +13,19 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 def get_db_connection():
+    import ssl
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
     return mysql.connector.connect(
         host=os.environ.get("MYSQL_HOST"),
         port=int(os.environ.get("MYSQL_PORT", 10261)),
         user=os.environ.get("MYSQL_USER", "avnadmin"),
         password=os.environ.get("MYSQL_PASSWORD"),
         database=os.environ.get("MYSQL_DATABASE", "missing_persons_db"),
-        ssl_disabled=False,
+        ssl_ca=None,
+        ssl_verify_cert=False,
+        ssl_verify_identity=False,
         connection_timeout=30
     )
 

@@ -8,6 +8,7 @@ from face_processor import FaceProcessor
 from dotenv import load_dotenv
 load_dotenv()
 
+
 def get_db_connection():
     return mysql.connector.connect(
         host=os.environ.get("MYSQL_HOST"),
@@ -19,8 +20,6 @@ def get_db_connection():
         ssl_verify_identity=False,
         connection_timeout=30
     )
-
-
 
 
 def load_all_encodings():
@@ -71,20 +70,12 @@ def save_alert(person_id, confidence, snapshot_path, camera_location="Webcam"):
 
 
 def get_face_key(x, y, w, h, tolerance=60):
-    """
-    Create a stable key for a face based on its center position.
-    Faces within 'tolerance' pixels are considered the same face.
-    """
     cx = int(x) + int(w) // 2
     cy = int(y) + int(h) // 2
-    # Convert to plain int to avoid np.int32 dict key mismatch
     return (int(cx // tolerance), int(cy // tolerance))
 
 
 def find_matching_state(face_key, face_states):
-    """
-    Find an existing state entry close to this face's position key.
-    """
     kx, ky = face_key
     for key in face_states:
         ox, oy = key
@@ -105,10 +96,18 @@ def run_camera():
 
     print(f"Watching for {len(known_persons)} missing persons...")
 
+    # ✅ FIX: Try camera index 0 first, fallback to 1
     cap = cv2.VideoCapture(1)
     if not cap.isOpened():
-        print("Error: Could not open camera")
+        print("Camera 0 not found, trying camera 1...")
+        cap = cv2.VideoCapture(1)
+    if not cap.isOpened():
+        print("Error: Could not open any camera")
         return
+
+    # ✅ FIX: Set lower resolution to reduce lag
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     print("Camera opened! Press Q to quit.")
 
@@ -121,10 +120,6 @@ def run_camera():
     frame_count = 0
     reload_every_frames = 100
     stay_green_frames = 30
-
-    # Position-based face state tracking
-    # Key: (grid_x, grid_y) based on face center position
-    # Value: {'match': person, 'confidence': float, 'frames_left': int}
     face_states = {}
 
     while True:
@@ -135,7 +130,7 @@ def run_camera():
 
         frame_count += 1
 
-        # Reload DB periodically to pick up new entries
+        # Reload DB periodically
         if frame_count % reload_every_frames == 0:
             print("Refreshing encodings from database...")
             new_persons = load_all_encodings()
@@ -161,8 +156,8 @@ def run_camera():
             minSize=(80, 80)
         )
 
-        # Run recognition only every 5th frame to reduce lag
-        do_recognition = (frame_count % 5 == 0)
+        # ✅ FIX: Process every 10th frame instead of 5th — reduces lag
+        do_recognition = (frame_count % 10 == 0)
 
         for i, (x, y, w, h) in enumerate(faces):
             face_key = get_face_key(x, y, w, h)
@@ -178,7 +173,11 @@ def run_camera():
                 face_crop = frame[y1:y2, x1:x2]
 
                 temp_path = f"temp_face_{i}.jpg"
-                cv2.imwrite(temp_path, face_crop)
+
+                # ✅ FIX: Lower JPEG quality = faster write
+                cv2.imwrite(temp_path, face_crop,
+                           [cv2.IMWRITE_JPEG_QUALITY, 85])
+
                 unknown_encoding = processor.extract_face_encoding(temp_path)
 
                 if unknown_encoding is not None:
@@ -207,7 +206,6 @@ def run_camera():
                             best_match = person
                             best_confidence = confidence
 
-                    # Store result by position key (not index)
                     state_key = existing_key if existing_key else face_key
                     if best_match is not None:
                         face_states[state_key] = {
@@ -225,18 +223,16 @@ def run_camera():
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
 
-            # Draw result using position-based state
+            # Draw result
             draw_key = existing_key if existing_key else face_key
             state = face_states.get(draw_key, {})
 
             if state.get('match') and state.get('frames_left', 0) > 0:
-                # GREEN — matched person
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 3)
                 label = f"FOUND: {state['match']['name']} ({state['confidence']:.1f}%)"
                 cv2.putText(frame, label, (x, y-10),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-                # Save alert with cooldown
                 if do_recognition:
                     person_id = state['match']['id']
                     now = datetime.now()
@@ -256,7 +252,6 @@ def run_camera():
                         alert_cooldown[person_id] = now
                         print(f"Alert saved! Snapshot: {snapshot_path}")
             else:
-                # RED — unknown
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
                 cv2.putText(frame, "Unknown", (x, y-10),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)

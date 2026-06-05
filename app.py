@@ -2,14 +2,29 @@ from flask import Flask, render_template, request, redirect, flash, jsonify
 import mysql.connector
 import os
 import pickle
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'mysecretkey123'
 
-# Use /tmp for uploads on cloud (Render), fallback to local
-UPLOAD_FOLDER = '/tmp/uploads'
+# Smart upload folder — local when running locally, /tmp/uploads on Render
+IS_LOCAL = os.path.exists('face_processor.py')
+UPLOAD_FOLDER = 'uploads' if IS_LOCAL else '/tmp/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Load face processor only when running locally
+face_processor = None
+if IS_LOCAL:
+    try:
+        from face_processor import FaceProcessor
+        face_processor = FaceProcessor()
+        print("FaceProcessor loaded — running locally with encoding support")
+    except Exception as e:
+        print(f"FaceProcessor not available: {e}")
+else:
+    print("Running on cloud — encoding extraction disabled")
 
 
 def get_db_connection():
@@ -42,16 +57,22 @@ def register_missing_person():
         photo = request.files['photo']
 
         if photo:
-            # Save photo to /tmp/uploads
             photo_filename = f"{name}_{os.urandom(4).hex()}.jpg"
             photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
             photo.save(photo_path)
             print(f"Photo saved at: {photo_path}")
 
-            # NOTE: Face encoding is extracted by camera_recognition.py running locally.
-            # Web app stores the photo path; encoding will be added by local script.
-            # For now, store NULL encoding — camera script will update it.
+            # Extract encoding if running locally
             encoding_bytes = None
+            if face_processor is not None:
+                print("Extracting face encoding locally...")
+                face_encoding = face_processor.extract_face_encoding(photo_path)
+                if face_encoding is not None:
+                    encoding_bytes = pickle.dumps(face_encoding)
+                    print(f"Encoding extracted! Length: {len(face_encoding)}")
+                else:
+                    flash('Could not extract face. Please use a clear front-facing photo.', 'error')
+                    return redirect('/register')
 
             try:
                 conn = get_db_connection()
@@ -65,8 +86,10 @@ def register_missing_person():
                 cursor.close()
                 conn.close()
 
-                print(f"Successfully registered: {name}")
-                flash(f'{name} has been registered successfully! Please run the encoding script locally to enable recognition.', 'success')
+                if encoding_bytes:
+                    flash(f'{name} registered successfully with face encoding!', 'success')
+                else:
+                    flash(f'{name} registered! Run fix_encodings.py locally to add face encoding.', 'warning')
                 return redirect('/')
 
             except Exception as e:
